@@ -1,7 +1,8 @@
 # Makefile for phoon
 
-BINDIR =	/usr/local/bin
-MANDIR =	/usr/local/man/man1
+PREFIX ?= 	/usr/local
+BINDIR =	$(PREFIX)/bin
+MANDIR =	$(PREFIX)/share/man/man1
 
 DEFINES =	-DOS_BSD
 #DEFINES =	-DOS_SYSV
@@ -24,6 +25,7 @@ date_parse.o:	date_parse.h
 astro.o:	astro.h
 
 install:	all
+	mkdir -p $(BINDIR) $(MANDIR)
 	rm -f $(BINDIR)/phoon
 	cp phoon $(BINDIR)
 	rm -f $(MANDIR)/phoon.1
