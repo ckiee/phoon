@@ -49,6 +49,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
+#include <stdbool.h>
 
 #include "astro.h"
 #include "date_parse.h"
@@ -82,7 +84,7 @@ static void putseconds(long secs) {
     printf("%ld %2ld:%02ld:%02ld", days, hours, minutes, secs);
 }
 
-static void putmoon(time_t t, int numlines, char *atfiller) {
+static void putmoon(time_t t, int numlines, bool quiet, char *atfiller) {
     static char background18[18][37] = {
         "             .----------.            ",
         "         .--'   o    .   `--.        ",
@@ -445,7 +447,7 @@ static void putmoon(time_t t, int numlines, char *atfiller) {
             putchar(' ');
 #endif /* notdef */
 
-        if (numlines <= 27) {
+        if (!quiet && numlines <= 27) {
             /* Output the end-of-line information, if any. */
             if (lin == midlin - 2) {
                 fputs("\t ", stdout);
@@ -472,44 +474,41 @@ int main(int argc, char **argv) {
     time_t t;
     char buf[100];
     int numlines, argn;
-    char *usage = "usage:  %s  [-l <lines>]  [<date/time>]\n";
+		bool quiet = false;
+    char *usage = "usage:  %s  [-l <lines>]  [-q]  [<date/time>]\n";
 
     /* Parge args. */
     argn = 1;
-    /* Check for -l flag. */
     numlines = DEFAULTNUMLINES;
-    if (argc - argn >= 1) {
-        if (argv[argn][0] == '-') {
-            if (argv[argn][1] != 'l' || argv[argn][2] != '\0') {
-                fprintf(stderr, usage, argv[0]);
-                exit(1);
-            } else {
-                if (argc - argn < 2) {
-                    fprintf(stderr, usage, argv[0]);
-                    exit(1);
-                }
-                if (sscanf(argv[argn + 1], "%d", &numlines) != 1) {
-                    fprintf(stderr, usage, argv[0]);
-                    exit(1);
-                }
-                argn += 2;
-            }
+
+    int opt;
+    while ((opt = getopt(argc, argv, "ql:")) != -1) {
+        switch (opt) {
+        case 'q':
+            quiet = true;
+            break;
+        case 'l':
+            numlines = atoi(optarg);
+            break;
+        default:
+            fprintf(stderr, usage, argv[0]);
+            exit(1);
         }
     }
 
     /* Figure out what date and time to use. */
-    if (argc - argn == 0) {
+    if (argc - optind == 0) {
         /* No arguments present - use the current date and time. */
         t = time((time_t)0);
-    } else if (argc - argn == 1 || argc - argn == 2 || argc - argn == 3) {
+    } else if (argc - optind == 1 || argc - optind == 2 || argc - optind == 3) {
         /* One, two, or three args - use them. */
-        strcpy(buf, argv[argn]);
-        if (argc - argn > 1) {
+        strcpy(buf, argv[optind]);
+        if (argc - optind > 1) {
             strcat(buf, " ");
-            strcat(buf, argv[argn + 1]);
-            if (argc - argn > 2) {
+            strcat(buf, argv[optind + 1]);
+            if (argc - optind > 2) {
                 strcat(buf, " ");
-                strcat(buf, argv[argn + 2]);
+                strcat(buf, argv[optind + 2]);
             }
         }
         t = date_parse(buf);
@@ -525,9 +524,9 @@ int main(int argc, char **argv) {
 
     /* Pseudo-randomly decide what the moon is made of, and print it. */
     if (t % 17 == 3)
-        putmoon(t, numlines, "GREENCHEESE");
+        putmoon(t, numlines, quiet, "GREENCHEESE");
     else
-        putmoon(t, numlines, "@");
+        putmoon(t, numlines, quiet, "@");
 
     /* All done. */
     exit(0);
